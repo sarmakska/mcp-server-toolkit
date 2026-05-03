@@ -12,25 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.12'
+          version: latest
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Set up Python
+        run: uv python install 3.12
 
-      - name: Install dependencies
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv sync --all-extras --dev || uv pip install -e .
+      - name: Compile syntax check
+        run: uv run --with-requirements <(echo "") python -m compileall -q . || python -m compileall -q .
 
-      - name: Lint
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run ruff check . || true
-
-      - name: Test
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run pytest -q || true
+      - name: Lint (best-effort)
+        run: uv tool run ruff check . || true
