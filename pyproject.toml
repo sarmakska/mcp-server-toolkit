@@ -2,7 +2,7 @@
 name = "mcp-server-toolkit"
 version = "1.0.0"
 description = "Production-ready Model Context Protocol server starter with auth, tracing, and a plugin system."
-authors = [{ name = "Sarma Linux", email = "helpme@sarmalinux.com" }]
+authors = [{ name = "Sarma Linux", email = "sarma@sarmalinux.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12"
