@@ -1,4 +1,4 @@
-"""Smoke tests: prove the server entry point and registry boot cleanly."""
+"""Smoke tests: prove the entry point, settings and registry boot cleanly."""
 
 from mcp_toolkit import __version__
 from mcp_toolkit.config import Settings
@@ -17,11 +17,9 @@ def test_settings_defaults() -> None:
 
 
 def test_plugins_register_tools() -> None:
-    # Importing the bundled plugins should populate the registry via the
-    # @registry.tool decorator. This is the path serve() takes on start.
-    from mcp_toolkit.plugins import filesystem, sarmalink  # noqa: F401
+    from mcp_toolkit.server import load_plugins
 
-    assert registry.tools, "no tools registered after importing plugins"
+    load_plugins()
     listed = registry.list_tools()
     names = {entry["name"] for entry in listed}
     assert "read_file" in names
@@ -29,10 +27,9 @@ def test_plugins_register_tools() -> None:
         assert entry["inputSchema"]["type"] == "object"
 
 
-def test_http_app_builds_and_health() -> None:
+def test_http_app_builds_and_exposes_routes() -> None:
     from mcp_toolkit.transports.http import make_app
 
     app = make_app(registry)
     routes = {route.path for route in app.routes}
-    assert "/health" in routes
-    assert "/tools" in routes
+    assert {"/health", "/tools", "/mcp"} <= routes
