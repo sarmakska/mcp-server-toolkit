@@ -1,6 +1,7 @@
 """Streamable HTTP transport via FastAPI."""
-from fastapi import FastAPI, Request, HTTPException
 import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+
 from ..registry import Registry
 
 
@@ -21,8 +22,8 @@ def make_app(registry: Registry) -> FastAPI:
         try:
             result = await registry.call(name, body or {})
             return {"result": result}
-        except KeyError:
-            raise HTTPException(404, f"Tool {name} not found")
+        except KeyError as err:
+            raise HTTPException(404, f"Tool {name} not found") from err
 
     return app
 

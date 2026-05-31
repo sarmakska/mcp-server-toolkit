@@ -1,8 +1,10 @@
 """mcp-toolkit CLI: init, run, doctor."""
-import typer
 import asyncio
-from .server import serve
+
+import typer
+
 from .config import Settings
+from .server import serve
 
 app = typer.Typer(help="mcp-server-toolkit CLI")
 

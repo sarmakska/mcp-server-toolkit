@@ -6,8 +6,9 @@ Decorator-driven. Plugins import this and register handlers with @registry.tool.
 from __future__ import annotations
 
 import inspect
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass

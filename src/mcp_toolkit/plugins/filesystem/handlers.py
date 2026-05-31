@@ -1,5 +1,6 @@
 """Sandboxed filesystem tools for MCP."""
 from pathlib import Path
+
 from ...registry import registry
 
 ALLOWED_ROOT = Path.home() / "mcp-data"

@@ -1,7 +1,8 @@
 """JSON-RPC over stdio for local agents (Claude Desktop, Cursor, etc)."""
+import asyncio
 import json
 import sys
-import asyncio
+
 from ..registry import Registry
 
 
@@ -38,6 +39,14 @@ async def handle_message(msg: dict, registry: Registry) -> dict:
         name = params.get("name")
         args = params.get("arguments", {})
         result = await registry.call(name, args)
-        return {"jsonrpc": "2.0", "id": msg_id, "result": {"content": [{"type": "text", "text": str(result)}]}}
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {"content": [{"type": "text", "text": str(result)}]},
+        }
 
-    return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32601, "message": f"Unknown method: {method}"}}
+    return {
+        "jsonrpc": "2.0",
+        "id": msg_id,
+        "error": {"code": -32601, "message": f"Unknown method: {method}"},
+    }

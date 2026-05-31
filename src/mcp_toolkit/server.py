@@ -1,10 +1,11 @@
 """Server entry point. Picks transport, wires registry, starts."""
 import asyncio
-from .registry import registry
+
 from .config import Settings
+from .registry import registry
 from .telemetry import setup_telemetry
-from .transports.stdio import run_stdio
 from .transports.http import run_http
+from .transports.stdio import run_stdio
 
 
 async def serve(settings: Settings | None = None) -> None:
