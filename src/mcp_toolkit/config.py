@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -12,6 +12,4 @@ class Settings(BaseSettings):
 
     otel_endpoint: str = ""
 
-    class Config:
-        env_prefix = "MCP_"
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_prefix="MCP_", env_file=".env")
