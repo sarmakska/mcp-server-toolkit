@@ -12,15 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
           version: latest
 
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Compile syntax check
-        run: uv run --with-requirements <(echo "") python -m compileall -q . || python -m compileall -q .
+      - name: Sync dependencies
+        run: uv sync --dev
 
-      - name: Lint (best-effort)
-        run: uv tool run ruff check . || true
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Build wheel
+        run: uv build
+
+      - name: Test
+        run: uv run pytest -q
