@@ -8,12 +8,15 @@ from .transports.http import run_http
 from .transports.stdio import run_stdio
 
 
+def load_plugins() -> None:
+    """Import the bundled plugins so their @registry.tool decorators run."""
+    from .plugins import filesystem, sarmalink  # noqa: F401
+
+
 async def serve(settings: Settings | None = None) -> None:
     settings = settings or Settings()
     setup_telemetry(settings)
-
-    # Auto-import plugins so they register with @registry.tool
-    from .plugins import filesystem, sarmalink  # noqa: F401
+    load_plugins()
 
     if settings.transport == "stdio":
         await run_stdio(registry, settings)
