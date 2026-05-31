@@ -1,12 +1,32 @@
+# Python
 __pycache__/
 *.py[cod]
-*.egg-info
+*.egg-info/
+.eggs/
+
+# Virtual environments and caches
 .venv/
-.env
-.env*.local
 .uv-cache/
-dist/
-build/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Builds
+build/
+dist/
+target/
+
+# Node (for any tooling)
+node_modules/
+.next/
+.vercel/
+
+# Environment and local secrets
+.env
+.env*.local
+
+# OS
 .DS_Store
