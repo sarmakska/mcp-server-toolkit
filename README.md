@@ -1,16 +1,13 @@
 # mcp-server-toolkit
 
-[![CI](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-informational)](https://github.com/sarmakska/mcp-server-toolkit/releases)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![MCP](https://img.shields.io/badge/MCP-1.4-blueviolet)](https://modelcontextprotocol.io)
-[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-traced-purple)](https://opentelemetry.io)
-[![Docker](https://img.shields.io/badge/Docker-distroless-2496ED?logo=docker&logoColor=white)](https://docker.com)
-[![Open Source](https://img.shields.io/badge/Open_Source-%E2%9D%A4-red)](https://github.com/sarmakska/mcp-server-toolkit)
-
 **Production-ready Model Context Protocol server starter with auth, tracing, and a plugin system.**
+
+[![CI](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/sarmakska/mcp-server-toolkit)](https://opensource.org/licenses/MIT)
+[![Language](https://img.shields.io/github/languages/top/sarmakska/mcp-server-toolkit)](https://github.com/sarmakska/mcp-server-toolkit)
+[![Last commit](https://img.shields.io/github/last-commit/sarmakska/mcp-server-toolkit)](https://github.com/sarmakska/mcp-server-toolkit/commits/main)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
+[![MCP](https://img.shields.io/badge/MCP-1.4-blueviolet)](https://modelcontextprotocol.io)
 
 Built by [Sarma Linux](https://sarmalinux.com).
 
@@ -33,14 +30,23 @@ graph TD
   HTTP --> Auth[OAuth 2.1 / API key]
   Auth --> Reg
   Reg --> P1[plugin: filesystem]
-  Reg --> P2[plugin: postgres]
-  Reg --> P3[plugin: github]
-  Reg --> P4[plugin: sarmalink]
-  P4 -->|api.sarmalink.ai| SLAI[SarmaLink-AI]
+  Reg --> P2[plugin: sarmalink]
+  Reg --> P3[your plugins]
+  P2 -->|api.sarmalink.ai| SLAI[SarmaLink-AI]
 
   classDef ext fill:#a78bfa,stroke:#a78bfa,color:#fff
   class SLAI ext
 ```
+
+## What is in the box
+
+- **Two transports, one code path.** stdio (JSON-RPC 2.0) for local agents, streamable HTTP (FastAPI) for remote deployment. A tool written once is reachable over both.
+- **Auth built in.** OAuth 2.1 with PKCE or API key, selected by environment variable.
+- **Plugin system.** One directory, one `@registry.tool` decorator, auto-imported on start. Handler signatures generate the tool JSON schema.
+- **Observability.** Structured JSON logs via structlog by default; set an OTLP endpoint and every tool call is exported as an OpenTelemetry span.
+- **Rate limiting** per client, configurable.
+- **Distroless Docker image** (~120MB) that runs on Fly.io, Render, Railway, and Kubernetes.
+- **Two example plugins.** A local `filesystem` plugin and a `sarmalink` plugin that wraps an external API end to end.
 
 ## Quick start
 
@@ -68,8 +74,11 @@ async def search_docs(query: str) -> dict:
 |---|---|---|
 | `MCP_TRANSPORT` | `stdio` or `http` | `stdio` |
 | `MCP_AUTH` | `none`, `api_key`, `oauth` | `none` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTel collector URL | unset |
-| `SARMALINK_API_KEY` | for the sarmalink plugin | unset |
+| `MCP_HTTP_PORT` | port for the HTTP transport | `8000` |
+| `MCP_OTEL_ENDPOINT` | OTLP collector URL | unset |
+| `MCP_SARMALINK_API_KEY` | key for the sarmalink plugin | unset |
+
+All settings use the `MCP_` prefix and can also be supplied via a `.env` file. See [.env.example](.env.example).
 
 ## Deployment
 
@@ -79,6 +88,12 @@ Distroless Docker image, ~120MB. Runs on Fly.io, Render, Railway, k8s.
 docker build -t mcp-toolkit .
 docker run -p 8000:8000 --env-file .env mcp-toolkit
 ```
+
+## When to use this, when not to
+
+Use this when you are building an MCP server that needs to ship: you want auth, tracing, rate limiting, and both transports without writing the plumbing, and you want the same plugin code to run locally over stdio and in production over HTTP. It suits internal tool gateways, remote MCP servers for a team, and bridges that wrap an existing API as MCP tools.
+
+Do not reach for this if you only need a throwaway single-tool stdio server for one local agent, where the reference SDK example is lighter. It is also not a managed product: you host and operate it yourself. If your tools are pure read-only file access with no auth requirement, the overhead here is more than you need.
 
 ## Documentation
 
