@@ -1,24 +1,25 @@
 [project]
 name = "mcp-server-toolkit"
-version = "1.0.0"
-description = "Production-ready Model Context Protocol server starter with auth, tracing, and a plugin system."
+version = "1.1.0"
+description = "Production-ready Model Context Protocol server starter with auth, tracing, schema validation, and a plugin system."
 authors = [{ name = "Sarma Linux", email = "sarma@sarmalinux.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "mcp>=1.4",
+  "mcp>=1.27.2",
   "fastapi>=0.115",
-  "uvicorn[standard]>=0.32",
-  "pydantic>=2.9",
-  "pydantic-settings>=2.6",
+  "uvicorn[standard]>=0.46.0",
+  "pydantic>=2.13.4",
+  "pydantic-settings>=2.14.1",
   "typer>=0.12",
-  "structlog>=24",
-  "opentelemetry-api>=1.29",
-  "opentelemetry-sdk>=1.29",
-  "opentelemetry-exporter-otlp>=1.29",
-  "httpx>=0.27",
-  "python-jose[cryptography]>=3.3",
+  "structlog>=25.5.0",
+  "opentelemetry-api>=1.41.1",
+  "opentelemetry-sdk>=1.41.1",
+  "opentelemetry-exporter-otlp>=1.41.1",
+  "httpx>=0.28.1",
+  "python-jose[cryptography]>=3.5.0",
+  "jsonschema>=4.23",
 ]
 
 [dependency-groups]
