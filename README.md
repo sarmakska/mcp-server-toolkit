@@ -1,6 +1,8 @@
 # mcp-server-toolkit
 
+[![CI](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/sarmakska/mcp-server-toolkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0-informational)](https://github.com/sarmakska/mcp-server-toolkit/releases)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![MCP](https://img.shields.io/badge/MCP-1.4-blueviolet)](https://modelcontextprotocol.io)
@@ -78,9 +80,13 @@ docker build -t mcp-toolkit .
 docker run -p 8000:8000 --env-file .env mcp-toolkit
 ```
 
+## Documentation
+
+Full docs live in the [wiki](https://github.com/sarmakska/mcp-server-toolkit/wiki): architecture, quick start, plugin authoring, auth modes, observability, and deployment. The bundled [sarmalink plugin](src/mcp_toolkit/plugins/sarmalink/handlers.py) is a working end-to-end example of a side-effecting tool that calls an external API.
+
 ## Roadmap
 
-See [docs/OPEN-ISSUES.md](docs/OPEN-ISSUES.md). PRs welcome.
+See the [Roadmap](https://github.com/sarmakska/mcp-server-toolkit/wiki/Roadmap) and open [issues](https://github.com/sarmakska/mcp-server-toolkit/issues). PRs welcome.
 
 ## License
 
