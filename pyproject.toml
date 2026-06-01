@@ -19,7 +19,7 @@ dependencies = [
   "opentelemetry-exporter-otlp>=1.41.1",
   "httpx>=0.28.1",
   "python-jose[cryptography]>=3.5.0",
-  "jsonschema>=4.23",
+  "jsonschema>=4.26.0",
 ]
 
 [dependency-groups]
