@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0]
+
+### Added
+
+- JSON-RPC 2.0 batch requests on both transports. A top-level JSON array of messages is dispatched concurrently through the shared `dispatch_batch` entry point and returns an array of responses with notification members omitted, matching the JSON-RPC specification. An empty batch is rejected as an invalid request, a batch of only notifications produces no response body, and an invalid (non-object) member yields a per-member error rather than failing the whole batch. MCP revision `2025-06-18` removed batching, so this is offered for clients negotiating `2025-03-26` or `2024-11-05` without rejecting them.
+
+### Fixed
+
+- The HTTP `POST /mcp` endpoint now returns a JSON-RPC parse error (`-32700`) for malformed JSON bodies instead of an unhandled `500`.
+- `dispatch` now answers a non-object JSON-RPC message with an invalid-request error (`-32600`) rather than raising, which also makes batch members robust.
+
+## [1.1.0]
+
 ### Added
 
 - MCP 1.0 compliant protocol layer (`protocol.py`) shared by both transports: `initialize` with protocol version negotiation, `notifications/initialized`, `ping`, `tools/list`, and `tools/call` returning content blocks and `structuredContent`.

@@ -62,10 +62,19 @@ uv run mcp-toolkit run --transport http --port 8000
 curl -s localhost:8000/mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
+Send several calls in one round trip with a JSON-RPC 2.0 batch (an array). The response is an array in the same order, with notifications omitted:
+
+```bash
+curl -s localhost:8000/mcp -d '[
+  {"jsonrpc":"2.0","id":1,"method":"ping"},
+  {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+]'
+```
+
 ## What is in the box
 
 - **MCP 1.0 compliant.** Full `initialize` handshake with protocol version negotiation (`2025-06-18`, `2025-03-26`, `2024-11-05`), `notifications/initialized`, `ping`, `tools/list`, and `tools/call` with content blocks and structured results. The protocol layer is shared, so both transports behave identically.
-- **Two transports, one code path.** stdio (JSON-RPC 2.0) for local agents, streamable HTTP (FastAPI) at `POST /mcp` for remote deployment. A tool written once is reachable over both.
+- **Two transports, one code path.** stdio (JSON-RPC 2.0) for local agents, streamable HTTP (FastAPI) at `POST /mcp` for remote deployment. A tool written once is reachable over both. Both accept JSON-RPC 2.0 batches: send an array of messages and get an array of responses back, dispatched concurrently, with notifications omitted per the spec.
 - **Auth built in.** API key (constant-time comparison) or OAuth 2.1 bearer tokens validated against the issuer's JWKS with issuer and audience checks, selected by `MCP_AUTH`. A `mcp-toolkit login` command runs the OAuth 2.1 PKCE flow to obtain a token against a hosted server.
 - **Schema validation.** The registry derives a JSON Schema from each handler's type hints and validates every call's arguments against it. Declare an `output_schema` and the return value is validated too, then surfaced as MCP `structuredContent`.
 - **Per-client rate limiting.** Token bucket keyed by client identity, configurable with `MCP_RATE_LIMIT_RPS`.
