@@ -2,8 +2,10 @@
 import json
 
 from mcp_toolkit.protocol import (
+    INVALID_REQUEST,
     LATEST_PROTOCOL_VERSION,
     dispatch,
+    dispatch_batch,
     negotiate_protocol_version,
 )
 
@@ -110,3 +112,70 @@ async def test_unknown_method(registry_with_tools):
         {"jsonrpc": "2.0", "id": 8, "method": "does/notexist"}, registry_with_tools
     )
     assert resp["error"]["code"] == -32601
+
+
+async def test_non_object_message_is_invalid_request(registry_with_tools):
+    resp = await dispatch("not-an-object", registry_with_tools)
+    assert resp["error"]["code"] == INVALID_REQUEST
+    assert resp["id"] is None
+
+
+async def test_dispatch_batch_single_message(registry_with_tools):
+    resp = await dispatch_batch(
+        {"jsonrpc": "2.0", "id": 1, "method": "ping"}, registry_with_tools
+    )
+    assert resp == {"jsonrpc": "2.0", "id": 1, "result": {}}
+
+
+async def test_dispatch_batch_returns_responses_in_order(registry_with_tools):
+    batch = [
+        {"jsonrpc": "2.0", "id": 1, "method": "ping"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "add", "arguments": {"a": 2, "b": 3}},
+        },
+    ]
+    resp = await dispatch_batch(batch, registry_with_tools)
+    assert isinstance(resp, list)
+    assert [r["id"] for r in resp] == [1, 2, 3]
+    assert resp[0]["result"] == {}
+    assert resp[2]["result"]["structuredContent"] == {"sum": 5}
+
+
+async def test_dispatch_batch_omits_notification_responses(registry_with_tools):
+    batch = [
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 9, "method": "ping"},
+    ]
+    resp = await dispatch_batch(batch, registry_with_tools)
+    assert isinstance(resp, list)
+    assert len(resp) == 1
+    assert resp[0]["id"] == 9
+
+
+async def test_dispatch_batch_all_notifications_returns_none(registry_with_tools):
+    batch = [
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+    ]
+    resp = await dispatch_batch(batch, registry_with_tools)
+    assert resp is None
+
+
+async def test_dispatch_batch_empty_array_is_invalid_request(registry_with_tools):
+    resp = await dispatch_batch([], registry_with_tools)
+    assert resp["error"]["code"] == INVALID_REQUEST
+
+
+async def test_dispatch_batch_invalid_member_yields_error_in_batch(registry_with_tools):
+    batch = [
+        {"jsonrpc": "2.0", "id": 1, "method": "ping"},
+        "not-an-object",
+    ]
+    resp = await dispatch_batch(batch, registry_with_tools)
+    assert isinstance(resp, list)
+    assert len(resp) == 2
+    assert resp[1]["error"]["code"] == INVALID_REQUEST

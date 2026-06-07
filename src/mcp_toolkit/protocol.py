@@ -7,9 +7,18 @@ protocol version negotiation, the ``notifications/initialized`` acknowledgement,
 ``ping``, ``tools/list`` and ``tools/call``. Tool results are returned in the
 MCP content-block shape, with structured results surfaced through
 ``structuredContent`` when a tool declares an output schema.
+
+JSON-RPC 2.0 batch requests (a top-level array of messages) are handled by
+:func:`dispatch_batch`, which both transports call. A batch yields an array of
+responses with notifications omitted, an empty array is an invalid request, and
+a batch made entirely of notifications produces no response at all, matching the
+JSON-RPC specification. MCP revision ``2025-06-18`` removed batching, so a batch
+is only a transport-level concern for clients negotiating an earlier revision;
+the dispatcher accepts it regardless rather than rejecting older clients.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -79,6 +88,9 @@ async def dispatch(message: dict[str, Any], registry: Registry) -> dict[str, Any
     Returns ``None`` for notifications (messages without an ``id``), which must
     not produce a response per the JSON-RPC specification.
     """
+    if not isinstance(message, dict):
+        return _error(None, INVALID_REQUEST, "Request must be a JSON object")
+
     if message.get("jsonrpc") != "2.0":
         return _error(message.get("id"), INVALID_REQUEST, "jsonrpc must be '2.0'")
 
@@ -137,3 +149,30 @@ async def dispatch(message: dict[str, Any], registry: Registry) -> dict[str, Any
         return None
 
     return _error(msg_id, METHOD_NOT_FOUND, f"Unknown method: {method}")
+
+
+async def dispatch_batch(
+    payload: Any, registry: Registry
+) -> dict[str, Any] | list[dict[str, Any]] | None:
+    """Dispatch a single JSON-RPC message or a JSON-RPC 2.0 batch.
+
+    A batch is a top-level JSON array of request and notification objects. The
+    members are dispatched concurrently and the responses returned in a list,
+    with notification members (which have no ``id``) omitted. Per the JSON-RPC
+    specification an empty batch array is itself an invalid request, and a batch
+    that contains only notifications yields no response at all (``None``), which
+    a transport renders as an empty body.
+
+    A non-array payload is dispatched as a single message, so callers can route
+    both shapes through this one entry point.
+    """
+    if not isinstance(payload, list):
+        return await dispatch(payload, registry)
+
+    if not payload:
+        return _error(None, INVALID_REQUEST, "Batch must not be empty")
+
+    responses = await asyncio.gather(
+        *(dispatch(message, registry) for message in payload)
+    )
+    return [r for r in responses if r is not None] or None

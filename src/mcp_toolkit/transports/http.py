@@ -7,6 +7,7 @@ protected routes; ``/health`` is always open so it works as a readiness probe.
 """
 from __future__ import annotations
 
+import json
 import time
 
 import structlog
@@ -15,7 +16,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 
 from ..auth import OAuthError, OAuthVerifier, RateLimiter, verify_api_key
 from ..config import Settings
-from ..protocol import dispatch
+from ..protocol import PARSE_ERROR, dispatch_batch
 from ..registry import Registry, ToolValidationError
 
 log = structlog.get_logger("mcp-toolkit.http")
@@ -80,9 +81,18 @@ def make_app(registry: Registry, settings: Settings | None = None) -> FastAPI:
         }
 
     @app.post("/mcp")
-    async def mcp_endpoint(request: Request, _: None = Depends(authenticate)) -> dict | None:
-        message = await request.json()
-        return await dispatch(message, registry)
+    async def mcp_endpoint(
+        request: Request, _: None = Depends(authenticate)
+    ) -> dict | list | None:
+        try:
+            payload = await request.json()
+        except (json.JSONDecodeError, ValueError):
+            return {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": PARSE_ERROR, "message": "Parse error: invalid JSON"},
+            }
+        return await dispatch_batch(payload, registry)
 
     @app.get("/tools")
     async def list_tools(_: None = Depends(authenticate)) -> dict:

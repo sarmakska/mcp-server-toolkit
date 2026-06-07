@@ -1,6 +1,7 @@
 """JSON-RPC 2.0 over stdio for local agents (desktop clients, IDEs).
 
-Each line of stdin is one JSON-RPC message. The shared MCP dispatcher in
+Each line of stdin is one JSON-RPC message, or a JSON-RPC 2.0 batch (an array of
+messages) on a single line. The shared MCP dispatcher in
 :mod:`mcp_toolkit.protocol` produces the response; notifications produce no
 output, as the JSON-RPC specification requires.
 """
@@ -12,13 +13,13 @@ import sys
 
 import structlog
 
-from ..protocol import PARSE_ERROR, dispatch
+from ..protocol import PARSE_ERROR, dispatch_batch
 from ..registry import Registry
 
 log = structlog.get_logger("mcp-toolkit.stdio")
 
 
-def _write(response: dict) -> None:
+def _write(response: dict | list) -> None:
     sys.stdout.write(json.dumps(response) + "\n")
     sys.stdout.flush()
 
@@ -45,6 +46,6 @@ async def run_stdio(registry: Registry, settings=None) -> None:
             )
             continue
 
-        response = await dispatch(message, registry)
+        response = await dispatch_batch(message, registry)
         if response is not None:
             _write(response)

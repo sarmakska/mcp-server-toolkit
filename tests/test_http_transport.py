@@ -45,6 +45,33 @@ def test_mcp_full_handshake_and_call(client):
     assert call.json()["result"]["structuredContent"] == {"sum": 10}
 
 
+def test_mcp_batch_request_returns_array(client):
+    resp = client.post(
+        "/mcp",
+        json=[
+            {"jsonrpc": "2.0", "id": 1, "method": "ping"},
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "add", "arguments": {"a": 1, "b": 1}},
+            },
+        ],
+    )
+    body = resp.json()
+    assert isinstance(body, list)
+    assert [r["id"] for r in body] == [1, 2]
+    assert body[1]["result"]["structuredContent"] == {"sum": 2}
+
+
+def test_mcp_malformed_json_returns_parse_error(client):
+    resp = client.post(
+        "/mcp", content="{not json", headers={"content-type": "application/json"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["error"]["code"] == -32700
+
+
 def test_rest_tools_listing(client):
     resp = client.get("/tools")
     names = {t["name"] for t in resp.json()["tools"]}
