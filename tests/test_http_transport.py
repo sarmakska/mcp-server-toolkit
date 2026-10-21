@@ -103,3 +103,24 @@ def test_rate_limit_returns_429(registry_with_tools):
     codes = [client.get("/tools").status_code for _ in range(5)]
     assert 429 in codes
     assert codes[:2] == [200, 200]
+
+
+def test_rate_limit_in_none_mode_ignores_spoofed_auth_headers(registry_with_tools):
+    settings = Settings(auth="none", rate_limit_rps=1, rate_limit_burst=2)
+    client = TestClient(make_app(registry_with_tools, settings))
+    codes = [
+        client.get("/tools", headers={"X-API-Key": f"fake-{i}"}).status_code
+        for i in range(5)
+    ]
+    assert codes[:2] == [200, 200]
+    assert 429 in codes
+
+
+def test_rest_call_malformed_or_non_object_json_returns_4xx(client):
+    bad_json = client.post(
+        "/tools/add", content="{bad", headers={"content-type": "application/json"}
+    )
+    assert bad_json.status_code == 400
+
+    non_obj = client.post("/tools/add", json=[1, 2, 3])
+    assert non_obj.status_code == 422

@@ -22,12 +22,17 @@ from ..registry import Registry, ToolValidationError
 log = structlog.get_logger("mcp-toolkit.http")
 
 
-def _client_id(request: Request) -> str:
-    return (
-        request.headers.get("x-api-key")
-        or request.headers.get("authorization", "")
-        or (request.client.host if request.client else "anonymous")
-    )
+def _client_id(
+    request: Request,
+    auth_mode: str = "none",
+    oauth_sub: str | None = None,
+) -> str:
+    host = request.client.host if request.client else "anonymous"
+    if auth_mode == "api_key":
+        return request.headers.get("x-api-key") or host
+    if auth_mode == "oauth":
+        return oauth_sub or host
+    return host
 
 
 def make_app(registry: Registry, settings: Settings | None = None) -> FastAPI:
@@ -51,6 +56,7 @@ def make_app(registry: Registry, settings: Settings | None = None) -> FastAPI:
         )
 
     async def authenticate(request: Request) -> None:
+        oauth_sub: str | None = None
         if settings.auth == "none":
             pass
         elif settings.auth == "api_key":
@@ -63,13 +69,16 @@ def make_app(registry: Registry, settings: Settings | None = None) -> FastAPI:
             token = header.split(" ", 1)[1]
             assert verifier is not None
             try:
-                await verifier.verify(token)
+                claims = await verifier.verify(token)
+                oauth_sub = str(claims.get("sub") or "") or None
             except OAuthError as err:
                 raise HTTPException(401, str(err)) from err
         else:
             raise HTTPException(500, f"Unknown auth mode: {settings.auth}")
 
-        if limiter is not None and not limiter.allow(_client_id(request)):
+        if limiter is not None and not limiter.allow(
+            _client_id(request, settings.auth, oauth_sub)
+        ):
             raise HTTPException(429, "Rate limit exceeded")
 
     @app.get("/health")
@@ -102,7 +111,12 @@ def make_app(registry: Registry, settings: Settings | None = None) -> FastAPI:
     async def call_tool(
         name: str, request: Request, _: None = Depends(authenticate)
     ) -> dict:
-        body = await request.json()
+        try:
+            body = await request.json()
+        except (json.JSONDecodeError, ValueError) as err:
+            raise HTTPException(400, "Invalid JSON body") from err
+        if body is not None and not isinstance(body, dict):
+            raise HTTPException(422, "Request body must be a JSON object")
         try:
             result = await registry.call(name, body or {})
             return {"result": result}

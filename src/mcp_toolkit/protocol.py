@@ -96,7 +96,10 @@ async def dispatch(message: dict[str, Any], registry: Registry) -> dict[str, Any
 
     method = message.get("method")
     msg_id = message.get("id")
-    params = message.get("params") or {}
+    raw_params = message.get("params")
+    if raw_params is not None and not isinstance(raw_params, dict):
+        return _error(msg_id, INVALID_PARAMS, "'params' must be a JSON object")
+    params = raw_params or {}
     is_notification = "id" not in message
 
     if method == "initialize":
@@ -124,8 +127,11 @@ async def dispatch(message: dict[str, Any], registry: Registry) -> dict[str, Any
 
     if method == "tools/call":
         name = params.get("name")
-        arguments = params.get("arguments") or {}
-        if not name:
+        raw_arguments = params.get("arguments")
+        if raw_arguments is not None and not isinstance(raw_arguments, dict):
+            return _error(msg_id, INVALID_PARAMS, "'arguments' must be a JSON object")
+        arguments = raw_arguments or {}
+        if not name or not isinstance(name, str):
             return _error(msg_id, INVALID_PARAMS, "tools/call requires a 'name'")
         try:
             result = await registry.call(name, arguments)

@@ -27,13 +27,21 @@ class RateLimiter:
     burst:
         Maximum number of requests that can be made instantaneously. Defaults to
         ``rate`` so a client may spend a full second of budget at once.
+    max_buckets:
+        Maximum number of tracked client buckets before the oldest entry is
+        evicted, bounding memory usage.
     """
 
-    def __init__(self, rate: float, burst: int | None = None) -> None:
+    def __init__(
+        self, rate: float, burst: int | None = None, max_buckets: int = 10000
+    ) -> None:
         if rate <= 0:
             raise ValueError("rate must be positive")
+        if max_buckets <= 0:
+            raise ValueError("max_buckets must be positive")
         self.rate = rate
         self.burst = float(burst if burst is not None else rate)
+        self.max_buckets = max_buckets
         self._buckets: dict[str, _Bucket] = {}
 
     def allow(self, client: str, cost: float = 1.0) -> bool:
@@ -41,6 +49,9 @@ class RateLimiter:
         now = time.monotonic()
         bucket = self._buckets.get(client)
         if bucket is None:
+            if len(self._buckets) >= self.max_buckets:
+                oldest_key = next(iter(self._buckets))
+                del self._buckets[oldest_key]
             bucket = _Bucket(tokens=self.burst, last_refill=now)
             self._buckets[client] = bucket
         else:

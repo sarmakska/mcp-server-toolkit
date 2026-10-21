@@ -130,3 +130,52 @@ async def test_oauth_verifier_rejects_malformed_token():
     verifier = OAuthVerifier(issuer="https://issuer.example", audience="mcp-toolkit")
     with pytest.raises(OAuthError):
         await verifier.verify("not-a-jwt")
+
+
+def test_rate_limiter_evicts_oldest_bucket_when_full():
+    limiter = RateLimiter(rate=1, burst=1, max_buckets=2)
+    assert limiter.allow("c1") is True
+    assert limiter.allow("c2") is True
+    assert limiter.allow("c3") is True
+    assert len(limiter._buckets) == 2
+    assert "c1" not in limiter._buckets
+
+
+async def test_oauth_verifier_respects_min_refresh_interval_on_unknown_kid(
+    monkeypatch, rsa_signing
+):
+    pem, public_jwk = rsa_signing
+    unknown_kid_token = jwt.encode(
+        {
+            "iss": "https://issuer.example",
+            "aud": "mcp-toolkit",
+            "exp": int(time.time()) + 300,
+        },
+        pem,
+        algorithm="RS256",
+        headers={"kid": "unknown-kid"},
+    )
+    verifier = OAuthVerifier(
+        issuer="https://issuer.example",
+        audience="mcp-toolkit",
+        min_refresh_interval=60.0,
+    )
+    fetch_calls = 0
+
+    async def fake_fetch(self_inner):
+        nonlocal fetch_calls
+        if self_inner._jwks is not None:
+            return self_inner._jwks
+        fetch_calls += 1
+        self_inner._jwks = {"keys": [public_jwk]}
+        self_inner._fetched_at = time.monotonic()
+        return self_inner._jwks
+
+    monkeypatch.setattr(OAuthVerifier, "_get_jwks", fake_fetch)
+
+    for _ in range(3):
+        with pytest.raises(OAuthError):
+            await verifier.verify(unknown_kid_token)
+
+    # First call populates cache; subsequent unknown-kid calls within cooldown do not re-fetch
+    assert fetch_calls == 1

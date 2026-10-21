@@ -37,6 +37,10 @@ class OAuthVerifier:
         issuer's ``/.well-known/openid-configuration`` document.
     cache_ttl:
         Seconds to cache fetched JWKS before refetching.
+    min_refresh_interval:
+        Minimum seconds between forced JWKS refreshes when a token presents an
+        unknown ``kid``, preventing repeated upstream refetches on unverified
+        headers.
     """
 
     def __init__(
@@ -45,15 +49,17 @@ class OAuthVerifier:
         audience: str,
         jwks_uri: str = "",
         cache_ttl: int = 3600,
+        min_refresh_interval: float = 60.0,
         algorithms: tuple[str, ...] = ("RS256", "ES256", "RS384", "RS512"),
     ) -> None:
         self.issuer = issuer.rstrip("/")
         self.audience = audience
         self._jwks_uri = jwks_uri
         self.cache_ttl = cache_ttl
+        self.min_refresh_interval = min_refresh_interval
         self.algorithms = list(algorithms)
         self._jwks: dict[str, Any] | None = None
-        self._fetched_at = 0.0
+        self._fetched_at = -float(max(cache_ttl, min_refresh_interval) + 1.0)
 
     async def _discover_jwks_uri(self, client: httpx.AsyncClient) -> str:
         if self._jwks_uri:
@@ -76,7 +82,7 @@ class OAuthVerifier:
             resp = await client.get(jwks_uri)
             resp.raise_for_status()
             self._jwks = resp.json()
-            self._fetched_at = now
+            self._fetched_at = time.monotonic()
         return self._jwks
 
     async def verify(self, token: str) -> dict[str, Any]:
@@ -91,8 +97,11 @@ class OAuthVerifier:
         jwks = await self._get_jwks()
         kid = header.get("kid")
         key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
-        if key is None:
-            # Possible rotation: drop the cache and try once more.
+        if (
+            key is None
+            and (time.monotonic() - self._fetched_at) >= self.min_refresh_interval
+        ):
+            # Possible rotation: drop the cache and try once more after cooldown.
             self._jwks = None
             jwks = await self._get_jwks()
             key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)

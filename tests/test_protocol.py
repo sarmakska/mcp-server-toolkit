@@ -179,3 +179,29 @@ async def test_dispatch_batch_invalid_member_yields_error_in_batch(registry_with
     assert isinstance(resp, list)
     assert len(resp) == 2
     assert resp[1]["error"]["code"] == INVALID_REQUEST
+
+
+async def test_non_object_params_returns_invalid_params(registry_with_tools):
+    resp = await dispatch(
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": ["not", "an", "object"],
+        },
+        registry_with_tools,
+    )
+    assert resp["error"]["code"] == -32602
+
+
+async def test_non_object_arguments_returns_invalid_params(registry_with_tools):
+    resp = await dispatch(
+        {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {"name": "echo", "arguments": ["not-a-dict"]},
+        },
+        registry_with_tools,
+    )
+    assert resp["error"]["code"] == -32602
